@@ -12,13 +12,19 @@ add_action('rest_api_init', function () {
     'callback' => 'cn_send_logs',
     'permission_callback' => 'cn_check_auth'
   ]);
+
+  register_rest_route('codigonativo/v1', '/plugins', [
+    'methods'  => 'GET',
+    'callback' => 'cn_get_plugins',
+    'permission_callback' => 'cn_check_auth'
+  ]);
 });
 
 function cn_check_auth($request) {
   // Forzar HTTPS
-  if (!is_ssl()) {
-    return new WP_Error('insecure', 'Conexión debe ser HTTPS', ['status' => 403]);
-  }
+  // if (!is_ssl()) {
+  //   return new WP_Error('insecure', 'Conexión debe ser HTTPS', ['status' => 403]);
+  // }
 
   $token = sanitize_text_field($request->get_header('authorization'));
   if (!$token) {
@@ -26,7 +32,13 @@ function cn_check_auth($request) {
     return new WP_Error('missing_token', 'Token requerido', ['status' => 401]);
   }
 
-  $saved_hash = get_option('cn_api_token_hash');
+  $saved_token = get_option('cn_api_token');
+  $expiration = get_option('cn_api_token_expiration');
+
+  if (time() > $expiration) {
+    error_log('Token expirado, intento desde IP: ' . $_SERVER['REMOTE_ADDR']);
+    return new WP_Error('expired_token', 'Token expirado', ['status' => 401]);
+  }
 
   // Rate limiting: máximo 5 intentos fallidos por hora por IP
   $ip = $_SERVER['REMOTE_ADDR'];
@@ -38,7 +50,7 @@ function cn_check_auth($request) {
   }
 
   $clean_token = str_replace('Bearer ', '', $token);
-  if (!wp_check_password($clean_token, $saved_hash)) {
+  if ($clean_token !== $saved_token) {
     set_transient($transient_key, $attempts + 1, HOUR_IN_SECONDS);
     error_log('Token inválido desde IP: ' . $ip);
     return new WP_Error('invalid_token', 'Token inválido', ['status' => 401]);
@@ -69,4 +81,32 @@ function cn_send_logs($request) {
   error_log('Logs recibidos: ' . json_encode($logs));
 
   return new WP_REST_Response(['status' => 'logs processed'], 200);
+}
+
+function cn_get_plugins($request) {
+  if (!function_exists('get_plugins')) {
+    require_once ABSPATH . 'wp-admin/includes/plugin.php';
+  }
+
+  $all_plugins = get_plugins();
+  $update_plugins = get_plugin_updates();
+
+  $plugins = [];
+  $id = 1;
+  foreach ($all_plugins as $plugin_file => $plugin_data) {
+    $name = $plugin_data['Name'];
+    $current_version = $plugin_data['Version'];
+    $new_version = isset($update_plugins[$plugin_file]) ? $update_plugins[$plugin_file]->update->version : null;
+    $status = $new_version ? 'Desactualizado' : 'Actualizado';
+
+    $plugins[] = [
+      'id' => $id++,
+      'name' => $name,
+      'current_version' => $current_version,
+      'new_version' => $new_version ?: $current_version,
+      'status' => $status
+    ];
+  }
+
+  return new WP_REST_Response($plugins, 200);
 }
