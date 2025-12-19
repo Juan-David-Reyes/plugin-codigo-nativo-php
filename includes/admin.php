@@ -20,19 +20,13 @@ function cn_settings_page() {
 
   if (isset($_POST['cn_token']) && wp_verify_nonce($_POST['cn_nonce'], 'cn_update_token')) {
     $new_token = sanitize_text_field($_POST['cn_token']);
-    $expiration_hours = intval($_POST['cn_expiration']);
-    if ($new_token && $expiration_hours > 0) {
+    if ($new_token) {
       update_option('cn_api_token_hash', wp_hash_password($new_token));
-      update_option('cn_api_token_expiration', time() + ($expiration_hours * HOUR_IN_SECONDS));
       echo '<div class="notice notice-success"><p>Token actualizado exitosamente.</p></div>';
     } else {
-      echo '<div class="notice notice-error"><p>Error: Token o expiración inválidos.</p></div>';
+      echo '<div class="notice notice-error"><p>Error: Token inválido.</p></div>';
     }
   }
-
-  $current_expiration = get_option('cn_api_token_expiration', 0);
-  $remaining_time = $current_expiration - time();
-  $remaining_hours = $remaining_time > 0 ? round($remaining_time / HOUR_IN_SECONDS) : 0;
 
   ?>
   <div class="wrap">
@@ -44,12 +38,7 @@ function cn_settings_page() {
           <th scope="row"><label for="cn_token">Nuevo Token API</label></th>
           <td><input type="password" name="cn_token" id="cn_token" class="regular-text" required></td>
         </tr>
-        <tr>
-          <th scope="row"><label for="cn_expiration">Expiración (horas)</label></th>
-          <td><input type="number" name="cn_expiration" id="cn_expiration" value="24" min="1" required></td>
-        </tr>
       </table>
-      <p>Token actual expira en: <?php echo $remaining_hours; ?> horas.</p>
       <?php submit_button('Guardar Token'); ?>
     </form>
   </div>

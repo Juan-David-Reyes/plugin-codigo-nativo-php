@@ -27,12 +27,6 @@ function cn_check_auth($request) {
   }
 
   $saved_hash = get_option('cn_api_token_hash');
-  $expiration = get_option('cn_api_token_expiration');
-
-  if (time() > $expiration) {
-    error_log('Token expirado, intento desde IP: ' . $_SERVER['REMOTE_ADDR']);
-    return new WP_Error('expired_token', 'Token expirado', ['status' => 401]);
-  }
 
   // Rate limiting: máximo 5 intentos fallidos por hora por IP
   $ip = $_SERVER['REMOTE_ADDR'];
