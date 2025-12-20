@@ -278,7 +278,7 @@ class CodigoNativoConnect {
     public function register_api_routes() {
         // Ruta para validar token (GET para evitar bloqueos de ModSecurity)
         register_rest_route('codigo-nativo/v1', '/validate', array(
-            'methods' => array('GET', 'OPTIONS'),
+            'methods' => array('GET', 'POST', 'OPTIONS'),
             'callback' => array($this, 'api_validate_token'),
             'permission_callback' => '__return_true',
             'args' => array(
