@@ -1,0 +1,10 @@
+# Proteger archivos del plugin
+<Files "*.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Permitir acceso al archivo principal
+<Files "codigo-nativo-connect.php">
+    Allow from all
+</Files>
