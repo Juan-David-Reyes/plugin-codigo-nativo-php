@@ -1,6 +1,22 @@
 <?php
 
 add_action('rest_api_init', function () {
+    register_rest_route('codigonativo/v1', '/validate', [
+      'methods'  => 'GET',
+      'callback' => 'cn_validate_token',
+      'permission_callback' => '__return_true'
+    ]);
+  // Endpoint para validar el token desde el HUB
+  function cn_validate_token($request) {
+    $token = $request->get_param('token');
+    $saved_token = get_option('cn_api_token');
+    $expiration = get_option('cn_api_token_expiration');
+    $valid = false;
+    if ($token && $saved_token && $token === $saved_token && time() <= $expiration) {
+      $valid = true;
+    }
+    return new WP_REST_Response(['valid' => $valid], 200);
+  }
   register_rest_route('codigonativo/v1', '/status', [
     'methods'  => 'GET',
     'callback' => 'cn_get_site_status',
